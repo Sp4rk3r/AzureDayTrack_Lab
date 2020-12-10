@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore.Mvc;
-
+using RMotownFestival.Api.DAL;
 using RMotownFestival.Api.Data;
 using RMotownFestival.Api.Domain;
 
@@ -13,18 +14,36 @@ namespace RMotownFestival.Api.Controllers
     [ApiController]
     public class FestivalController : ControllerBase
     {
+        public MotownDbContext Context { get; set; }
+        private readonly TelemetryClient telemetryClient;
+
+        public FestivalController(MotownDbContext context, TelemetryClient telemetryClient)
+        {
+            Context = context;
+            this.telemetryClient = telemetryClient;
+        }
+
         [HttpGet("LineUp")]
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(Schedule))]
         public ActionResult GetLineUp()
         {
+            throw new ApplicationException("BAM Failed");
             return Ok(FestivalDataSource.Current.LineUp);
         }
 
         [HttpGet("Artists")]
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<Artist>))]
-        public ActionResult GetArtists()
+        public ActionResult GetArtists(bool? withRatings)
         {
-            return Ok(FestivalDataSource.Current.Artists);
+            if (withRatings.HasValue && withRatings.Value)
+            {
+                telemetryClient.TrackEvent($"List of artists with ratings");
+            }
+            else
+            {
+                telemetryClient.TrackEvent($"List of artists without ratings");
+            }
+            return Ok(Context.Artists);
         }
 
         [HttpGet("Stages")]
